@@ -373,6 +373,8 @@ func (r *SubRouter) reg(
 			Fatalf("there is a handler conflict: %s", h.name)
 		}
 		h.routerTypeName = routerTypeName
+		// PReader: 这里的map是从SubRouter中取出来的,
+		// 直接存在引用关系, 赋值完成后相当于就是拷贝进handlers中
 		hadHandlers[h.name] = h
 		pluginContainer.postReg(h)
 		Printf("register %s handler: %s", routerTypeName, h.name)
@@ -464,6 +466,8 @@ func makeCallHandlersFromStruct(prefix string, callCtrlStruct interface{}, plugi
 		handlers = make([]*Handler, 0, 1)
 	)
 
+	// PReader: 这里先对传入的callCtrlStruct进行检验
+	// 检验的标准: 是一个结构体指针, 并且内嵌CallCtx字段
 	if ctype.Kind() != reflect.Ptr {
 		return nil, errors.Errorf("call-handler: the type is not struct point: %s", ctype.String())
 	}
@@ -478,6 +482,7 @@ func makeCallHandlersFromStruct(prefix string, callCtrlStruct interface{}, plugi
 		return nil, errors.Errorf("call-handler: the struct do not have anonymous field erpc.CallCtx: %s", ctype.String())
 	}
 
+	// PReader: 整理这个结构体, 到CallCtrlValue
 	var callCtxOffset = iType.Offset
 
 	if pluginContainer == nil {
@@ -489,7 +494,11 @@ func makeCallHandlersFromStruct(prefix string, callCtrlStruct interface{}, plugi
 		ctxPtr *CallCtx
 	}
 	var pool = &sync.Pool{
+		// PReader: 牛逼啊
+		// 需求: ctypeElem拥有CallCtx字段, new出来之后需要单独再提取出来
 		New: func() interface{} {
+			// PReader: New的时候new的是element
+			// 然后通过 pointer + offset 来获取ctxPtr的地址
 			ctrl := reflect.New(ctypeElem)
 			callCtxPtr := ctrl.Pointer() + callCtxOffset
 			ctxPtr := (*CallCtx)(unsafe.Pointer(callCtxPtr))
@@ -500,6 +509,8 @@ func makeCallHandlersFromStruct(prefix string, callCtrlStruct interface{}, plugi
 		},
 	}
 
+	// PReader: 校验结构体对应的方法
+	//
 	for m := 0; m < ctype.NumMethod(); m++ {
 		method := ctype.Method(m)
 		mtype := method.Type
@@ -516,6 +527,7 @@ func makeCallHandlersFromStruct(prefix string, callCtrlStruct interface{}, plugi
 			return nil, errors.Errorf("call-handler: %s.%s needs one in argument, but have %d", ctype.String(), mname, mtype.NumIn())
 		}
 		// Receiver need be a struct pointer.
+		// PReader: 如果是有接收者的func, 则第1个参数是receiver
 		structType := mtype.In(0)
 		if structType.Kind() != reflect.Ptr || structType.Elem().Kind() != reflect.Struct {
 			if isBelongToCallCtx(mname) {

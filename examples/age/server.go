@@ -18,6 +18,7 @@ func main() {
 		DefaultSessionAge: time.Second * 7,
 		DefaultContextAge: time.Second * 2,
 	})
+
 	srv.RouteCall(new(test))
 	srv.ListenAndServe()
 }

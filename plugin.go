@@ -156,6 +156,7 @@ type PluginContainer struct {
 
 // newPluginContainer new a plugin container.
 func newPluginContainer() *PluginContainer {
+	// PReader: 这个写法也是, emm, 无法评价, 虽然也是实现了功能, 但是莫名觉得有点丑
 	p := &PluginContainer{
 		pluginSingleContainer: newPluginSingleContainer(),
 		left:                  newPluginSingleContainer(),
@@ -177,6 +178,7 @@ func (p *PluginContainer) cloneAndAppendMiddle(plugins ...Plugin) *PluginContain
 	newPluginContainer.refresh()
 
 	oldRefreshTree := p.refreshTree
+	// PReader: 这里的意思是refresh的时候需要同时更新clone出去的pluginContainer?
 	p.refreshTree = func() {
 		oldRefreshTree()
 		newPluginContainer.refresh()
@@ -209,6 +211,8 @@ func (p *PluginContainer) Remove(pluginName string) error {
 	return nil
 }
 
+// PReader: 这里其实就是left, middle和right的plugins合并成一个
+// 然后判空与判重
 func (p *PluginContainer) refresh() {
 	count := len(p.left.plugins) + len(p.middle.plugins) + len(p.right.plugins)
 	allPlugins := make([]Plugin, count)
@@ -300,6 +304,7 @@ func (p *pluginSingleContainer) remove(pluginName string) error {
 }
 
 // PreNewPeer executes the defined plugins before creating peer.
+// PReader: 拿出来plugins, 看看是不是PreNewPeerPlugin, 是的话就应用一下,
 func (p *PluginContainer) preNewPeer(peerConfig *PeerConfig) {
 	var err error
 	for _, plugin := range p.plugins {

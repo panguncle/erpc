@@ -459,6 +459,7 @@ func WithNothing() MessageSetting {
 }
 
 // WithContext sets the message handling context.
+// PReader: 这里感觉写的不太好, 现在就一种实现, 所以还ok, 后面改了的话就比较麻烦
 func WithContext(ctx context.Context) MessageSetting {
 	return func(m Message) {
 		m.(*message).ctx = ctx

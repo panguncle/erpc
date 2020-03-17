@@ -90,8 +90,11 @@ func (d *Dialer) dialWithRetry(addr, sessID string) (net.Conn, error) {
 	if err == nil {
 		return conn, nil
 	}
+
 	redialTimes := d.newRedialCounter()
 	for redialTimes.Next() {
+		// PReader: 这里使用了一个固定的数值
+		// 可以考虑使用backOff
 		time.Sleep(d.redialInterval)
 		if sessID == "" {
 			Debugf("trying to redial... (network:%s, addr:%s)", d.network, addr)
@@ -108,6 +111,7 @@ func (d *Dialer) dialWithRetry(addr, sessID string) (net.Conn, error) {
 
 // dialOne dials the connection once.
 func (d *Dialer) dialOne(addr string) (net.Conn, error) {
+	// PReader: 暂时只研究TCP, 这部分先跳过了
 	if asQUIC(d.network) {
 		ctx := context.Background()
 		if d.dialTimeout > 0 {
@@ -135,6 +139,8 @@ func (d *Dialer) newRedialCounter() *redialCounter {
 }
 
 // redialCounter redial counter
+// PReader: 使用int32对redialCounter进行封装
+// 是否有Next则是使用 counter -- 看看是否还有剩余次数
 type redialCounter int32
 
 // Next returns whether there are still more redial times.

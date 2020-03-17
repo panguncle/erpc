@@ -81,6 +81,9 @@ func SetDefaultProtoFunc(protoFunc ProtoFunc) {
 {metadata(urlencoded)}
 {1 byte body codec id}
 {body}
+
+PReader:
+|message_length(4bytes)|version(1byte)|transfer_pipe_len(1byte)|
 */
 
 // rawProto fast socket communication protocol.
@@ -96,6 +99,7 @@ type rawProto struct {
 // NOTE: it is the default protocol.
 var RawProtoFunc = func(rw IOWithReadBuffer) Proto {
 	return &rawProto{
+		// PReader: so what is the hack code id = 6??
 		id:   6,
 		name: "raw",
 		r:    rw,
@@ -115,9 +119,15 @@ func (r *rawProto) Pack(m Message) error {
 	defer utils.ReleaseByteBuffer(bb)
 
 	// fake size
+	// PReader: 现在长度未知, 相当于写个占位符的意思吧
 	err := binary.Write(bb, binary.BigEndian, uint32(0))
 
+	// PReader:
+	// binary.Write(w io.Writer, order ByteOrder, data interface{}) error
+	// binary.BigEndian.PutUint32(b []byte, v uint32)
+
 	// transfer pipe
+	// PReader: 为什么这里的bytes直接就写进去了? 不需要区分bigEndian??
 	bb.WriteByte(byte(m.XferPipe().Len()))
 	bb.Write(m.XferPipe().IDs())
 
@@ -161,6 +171,7 @@ func (r *rawProto) Pack(m Message) error {
 }
 
 func (r *rawProto) writeHeader(bb *utils.ByteBuffer, m Message) error {
+	// PReader: 使用36进制编码???
 	seqStr := strconv.FormatInt(int64(m.Seq()), 36)
 	bb.WriteByte(byte(len(seqStr)))
 	bb.Write(goutil.StringToBytes(seqStr))

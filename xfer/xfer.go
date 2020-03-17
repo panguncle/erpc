@@ -23,6 +23,7 @@ import (
 )
 
 // XferFilter handles byte stream of message when transfer.
+// PReader: 可以理解为: 这个是用来处理二进制流的过滤器
 type XferFilter interface {
 	// ID returns transfer filter id.
 	ID() byte
@@ -46,6 +47,7 @@ var xferFilterMap = struct {
 var ErrXferPipeTooLong = errors.New("The length of transfer pipe cannot be bigger than 255")
 
 // Reg registers transfer filter.
+// PReader: 注册XferFilter, 做去重校验
 func Reg(xferFilter XferFilter) {
 	id := xferFilter.ID()
 	name := xferFilter.Name()
@@ -79,6 +81,7 @@ func GetByName(name string) (XferFilter, error) {
 
 // XferPipe transfer filter pipe, handlers from outer-most to inner-most.
 // NOTE: the length can not be bigger than 255!
+// PReader: XferPipe可以理解为就是一堆filter的组合
 type XferPipe struct {
 	filters []XferFilter
 }
@@ -96,6 +99,8 @@ func (x *XferPipe) Reset() {
 // Append appends transfer filter by id.
 func (x *XferPipe) Append(filterID ...byte) error {
 	for _, id := range filterID {
+		// PReader: 这里的Get, 其实就是先查看已经注册的filters,
+		// Filters是需要提前注册, 才能添加到FilterPipe中
 		filter, err := Get(id)
 		if err != nil {
 			return err
@@ -112,6 +117,8 @@ func (x *XferPipe) AppendFrom(src *XferPipe) {
 	}
 }
 
+// PReader: 最后xferPipe只分配了一个byte的空间
+// 因此这里需要校验其最后的大小不超过255
 func (x *XferPipe) check() error {
 	if x.Len() > math.MaxUint8 {
 		return ErrXferPipeTooLong

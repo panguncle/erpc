@@ -161,7 +161,8 @@ func NewSocket(c net.Conn, protoFunc ...ProtoFunc) Socket {
 
 func newSocket(c net.Conn, protoFuncs []ProtoFunc) *socket {
 	var s = &socket{
-		Conn:             c,
+		Conn: c,
+		// PReader: 使用bufio, 利用缓冲区来提高多次读写提高效率
 		readerWithBuffer: bufio.NewReaderSize(c, readerSize),
 	}
 	s.protocol = getProto(protoFuncs, s)

@@ -10,7 +10,9 @@ import (
 //go:generate go build $GOFILE
 
 func main() {
+	// PReader: 也不知道干嘛的, 先跳过了
 	defer erpc.SetLoggerLevel("INFO")()
+	// PReader: 从README粘过来的注释: Use peer to provide the same API package for the server and client
 	cli := erpc.NewPeer(erpc.PeerConfig{PrintDetail: true})
 	sess, stat := cli.Dial(":9090")
 	if !stat.OK() {

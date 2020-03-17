@@ -125,6 +125,7 @@ const (
 	minSize = 1 << minBitSize
 	maxSize = 1 << (minBitSize + steps - 1)
 
+	// calibrate 校正, 调整
 	calibrateCallsThreshold = 42000
 	maxPercentile           = 0.95
 )
@@ -162,6 +163,10 @@ func (p *BufferPool) Get() *ByteBuffer {
 	if v != nil {
 		return v.(*ByteBuffer)
 	}
+	// PReader: Todo: 使用sync.Pool拿出来会拿到空的?
+	// 这里的Pool的用法跟其他地方的感觉不太一样, 这里并没有指定Pool的New方法
+	// 这里是随缘的吗, 有人放进去了别人才可以拿?
+	// 为什么不指定New??
 	return &ByteBuffer{
 		B: make([]byte, 0, atomic.LoadUint64(&p.defaultSize)),
 	}
@@ -179,6 +184,7 @@ func ReleaseByteBuffer(b *ByteBuffer) { defaultBufferPool.Put(b) }
 func (p *BufferPool) Put(b *ByteBuffer) {
 	idx := index(len(b.B))
 
+	// PReader: Todo
 	if atomic.AddUint64(&p.calls[idx], 1) > calibrateCallsThreshold {
 		p.calibrate()
 	}
@@ -248,8 +254,14 @@ func (ci callSizes) Swap(i, j int) {
 	ci[i], ci[j] = ci[j], ci[i]
 }
 
+// PReader: 这个Index是为了干嘛?? Todo
 func index(n int) int {
 	n--
+	// 抹掉最小的minBitSize
+	// 然后如果这个数值还大于0,
+	// 继续抹除, 每次抹除1位, index + 1
+	// 直到这个数值 <= 0
+	// index限制了一个最大值
 	n >>= minBitSize
 	idx := 0
 	for n > 0 {

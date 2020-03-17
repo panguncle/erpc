@@ -209,11 +209,13 @@ func newSession(peer *peer, conn net.Conn, protoFuncs []ProtoFunc) *session {
 		timeNow:        peer.timeNow,
 		protoFuncs:     protoFuncs,
 		status:         statusPreparing,
-		socket:         socket.NewSocket(conn, protoFuncs...),
-		closeNotifyCh:  make(chan struct{}),
-		callCmdMap:     goutil.AtomicMap(),
-		sessionAge:     peer.defaultSessionAge,
-		contextAge:     peer.defaultContextAge,
+		// PReader: 这里的socket其实是这个package内维护的一个对象
+		// 用于将Conn托管在bufio中
+		socket:        socket.NewSocket(conn, protoFuncs...),
+		closeNotifyCh: make(chan struct{}),
+		callCmdMap:    goutil.AtomicMap(),
+		sessionAge:    peer.defaultSessionAge,
+		contextAge:    peer.defaultContextAge,
 	}
 	return s
 }
@@ -664,6 +666,8 @@ func (s *session) AsyncCall(
 	callCmdChan chan<- CallCmd,
 	setting ...MessageSetting,
 ) CallCmd {
+	// PReader: 看不明白了, 为什么要buffered的channel, 在rpc中的也是一样的设计
+	// 默认值也是10个buffered
 	if callCmdChan == nil {
 		callCmdChan = make(chan CallCmd, 10) // buffered.
 	} else {
@@ -679,6 +683,10 @@ func (s *session) AsyncCall(
 	output.SetServiceMethod(serviceMethod)
 	output.SetBody(args)
 	output.SetMtype(TypeCall)
+	// PReader: 这里的话应该是理解为 NewMessage时可以doSetting
+	// 但是这样的话, 为什么不把这个setting的过程放到后面呢? 要在这样子的一个中间的位置呢?
+	// 那么是不是要这样理解:
+	// 在这个foreach setting之后的操作其实是属于一个不可让用户操作, 而且是校验的工作 ???
 	for _, fn := range setting {
 		if fn != nil {
 			fn(output)
@@ -709,6 +717,7 @@ func (s *session) AsyncCall(
 	// count call-launch
 	s.graceCallCmdWaitGroup.Add(1)
 
+	// PReader: 不是很清楚这里要干嘛
 	if s.socket.SwapLen() > 0 {
 		s.socket.Swap().Range(func(key, value interface{}) bool {
 			cmd.swap.Store(key, value)
@@ -735,6 +744,7 @@ func (s *session) AsyncCall(
 	var usedConn net.Conn
 W:
 	if usedConn, cmd.stat = s.write(output); !cmd.stat.OK() {
+		// PReader
 		if cmd.stat == statConnClosed && s.redialForClient(usedConn) {
 			goto W
 		}
@@ -901,6 +911,9 @@ func (s *session) write(message Message) (net.Conn, *Status) {
 		ctx         = message.Context()
 		deadline, _ = ctx.Deadline()
 	)
+
+	// PReader: 常规的操作啊
+	// 感觉大家都是这样用的
 	select {
 	case <-ctx.Done():
 		err = ctx.Err()
@@ -911,6 +924,8 @@ func (s *session) write(message Message) (net.Conn, *Status) {
 	s.writeLock.Lock()
 	defer s.writeLock.Unlock()
 
+	// PReader: 这是为了减少一次锁的开销吗??
+	// 怎么上面判了一下context是否已经Done了, 这里还要再来一次...
 	select {
 	case <-ctx.Done():
 		err = ctx.Err()

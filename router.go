@@ -78,7 +78,7 @@ func RPCServiceMethodMapper(prefix, name string) string {
 
 // toServiceMethods maps struct(func) name to service methods.
 func toServiceMethods(name string, sep rune, toSnake bool) string {
-	var a = []rune{}
+	var a = make([]rune, 0)
 	var last rune
 	for _, r := range name {
 		if last == '_' {
@@ -225,8 +225,9 @@ type (
 		root         *Router
 		callHandlers map[string]*Handler
 		pushHandlers map[string]*Handler
-		unknownCall  **Handler
-		unknownPush  **Handler
+		// PReader: **Handler, 两个指针, 这种在golang里面还是第一次看到
+		unknownCall **Handler
+		unknownPush **Handler
 		// only for register router
 		prefix          string
 		pluginContainer *PluginContainer
@@ -257,6 +258,7 @@ const (
 
 // newRouter creates root router.
 func newRouter(pluginContainer *PluginContainer) *Router {
+	// PReader: 暂且还不知道这jb东西要干嘛
 	rootGroup := globalServiceMethodMapper("", "")
 	root := &Router{
 		subRouter: &SubRouter{
@@ -344,6 +346,7 @@ func (r *SubRouter) RoutePushFunc(pushHandleFunc interface{}, plugin ...Plugin) 
 
 func (r *SubRouter) reg(
 	routerTypeName string,
+	// PReader: 这个handlerMaker就不能抽出来定义
 	handlerMaker func(string, interface{}, *PluginContainer) ([]*Handler, error),
 	ctrlStruct interface{},
 	plugins []Plugin,

@@ -48,6 +48,7 @@ type (
 		PluginContainer() *PluginContainer
 	}
 	// EarlyPeer the communication peer that has just been created
+	// PReader: 第一眼看这注释, 写得跟没写一样, 第一眼看过去, 根本知道这是要用来干什么的
 	EarlyPeer interface {
 		BasePeer
 		// Router returns the root router of call or push handlers.
@@ -116,6 +117,8 @@ type peer struct {
 // NewPeer creates a new peer.
 func NewPeer(cfg PeerConfig, globalLeftPlugin ...Plugin) Peer {
 	doPrintPid()
+	// PReader: 他这里的PluginContainer为了区分 plugin的位置
+	// 弄出了left, middle和right三个container
 	pluginContainer := newPluginContainer()
 	pluginContainer.AppendLeft(globalLeftPlugin...)
 	pluginContainer.preNewPeer(&cfg)
@@ -145,6 +148,7 @@ func NewPeer(cfg PeerConfig, globalLeftPlugin ...Plugin) Peer {
 		},
 	}
 
+	// PReader: 检查一下codec是否存在
 	if c, err := codec.GetByName(cfg.DefaultBodyCodec); err != nil {
 		Fatalf("%v", err)
 	} else {
@@ -155,6 +159,7 @@ func NewPeer(cfg PeerConfig, globalLeftPlugin ...Plugin) Peer {
 	} else {
 		p.timeNow = func() int64 { return 0 }
 	}
+	// PReader: package内维护了一个peer的容器
 	addPeer(p)
 	p.pluginContainer.postNewPeer(p)
 	return p
@@ -213,6 +218,8 @@ func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
 
 	// create redial func
 	if p.dialer.RedialTimes() != 0 {
+		// PReader: 就不能抽成一个函数吗
+		// 等有机会再看
 		sess.redialForClientLocked = func() bool {
 			oldID := sess.ID()
 			conn, err := p.dialer.dialWithRetry(addr, oldID)

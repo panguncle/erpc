@@ -126,6 +126,7 @@ func (p *PeerConfig) newAddr(port string) (net.Addr, error) {
 	}
 }
 
+// PReader: asQUIC, 返回的是udp协议
 func asQUIC(network string) bool {
 	switch network {
 	case "quic", "udp", "udp4", "udp6":

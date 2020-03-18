@@ -322,6 +322,7 @@ func (p *peer) serveListener(lis net.Listener, protoFunc ...ProtoFunc) error {
 				return ErrListenClosed
 			default:
 			}
+			// PReader: hhh, 这段backOff的代码感觉全世界通用
 			if ne, ok := e.(net.Error); ok && ne.Temporary() {
 				if tempDelay == 0 {
 					tempDelay = 5 * time.Millisecond

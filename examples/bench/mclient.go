@@ -23,7 +23,6 @@ var host = flag.String("s", "127.0.0.1:8972", "server ip and port")
 func main() {
 	flag.Parse()
 	n := *concurrency
-	m := *total / n
 
 	selected := -1
 	servers := strings.Split(*host, ",")
@@ -55,7 +54,7 @@ func main() {
 	d := make([][]int64, n, n)
 
 	//it contains warmup time but we can ignore it
-	totalT := time.Now().UnixNano()
+	startTime := time.Now()
 	for i := 0; i < n; i++ {
 		dt := make([]int64, 0, m)
 		d = append(d, dt)
@@ -98,8 +97,7 @@ func main() {
 	}
 
 	wg.Wait()
-	totalT = time.Now().UnixNano() - totalT
-	totalT = totalT / 1000000
+	totalT := time.Since(startTime).Milliseconds()
 	erpc.Printf("took %d ms for %d requests", totalT, n*m)
 
 	totalD := make([]int64, 0, n*m)

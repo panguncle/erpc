@@ -725,6 +725,8 @@ func (s *session) AsyncCall(
 		})
 	}
 
+	// PReader: Todo: 这里有必要在这里加锁吗
+	// 其他地方有操作这个cmd?
 	cmd.mu.Lock()
 	defer cmd.mu.Unlock()
 
